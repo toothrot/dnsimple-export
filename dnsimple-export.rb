@@ -39,6 +39,10 @@ records_in.each do |record|
   record_line += " IN "
   record_line += record.record_type
   record_line += " "
+  unless record.prio.to_s.blank?
+    record_line += record.prio.to_s
+    record_line += " "
+  end
   if record.record_type == "TXT"
     record_line += ('"' + record.content + '"')
   else
