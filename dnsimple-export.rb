@@ -1,16 +1,21 @@
+require 'rubygems'
+require 'bundler/setup'
 require 'dnsimple'
+require 'dotenv'
+
+Dotenv.load(File.join(ENV["HOME"], '.dnsimple-export'), '.env')
 
 DOMAIN_TO_EXPORT = ARGV[0]
-MAIN_NS = "lady.ns.cloudfront.com"
-SOA_EMAIL_AS_FQDN = "dave.dave.io"
-NS_RECORDS = ["matt.ns.cloudflare.com", "lady.ns.cloudflare.com"]
-DEFAULT_TTL = "3600"
+MAIN_NS = ENV["MAIN_NS"]
+SOA_EMAIL_AS_FQDN = ENV["SOA_EMAIL_AS_FQDN"]
+NS_RECORDS = ENV["NS_RECORDS"].split(" ")
+DEFAULT_TTL = ENV["DEFAULT_TTL"]
 
-config = YAML.load(open("auth.config").read)
-DNSimple::Client.username = config['username']
-DNSimple::Client.password = config['password']
+DNSimple::Client.username = ENV["USERNAME"]
+DNSimple::Client.password = ENV["PASSWORD"]
 
-records_in = DNSimple::Record.all(DOMAIN_TO_EXPORT)
+domain = DNSimple::Domain.find(DOMAIN_TO_EXPORT)
+records = DNSimple::Record.all(domain)
 
 header = <<-EOFS
 	@    #{DEFAULT_TTL}   IN      SOA     #{MAIN_NS}. #{SOA_EMAIL_AS_FQDN}. (
@@ -21,40 +26,31 @@ header = <<-EOFS
 	                        86400 )         ; minimum, seconds
 EOFS
 
-records_out = []
-
-NS_RECORDS.each do |ns_hostname|
-  records_out.push "#{DOMAIN_TO_EXPORT}. #{DEFAULT_TTL} IN NS #{ns_hostname}."
-end
-
-records_in.each do |record|
-  record_line = ""
-  if (record.name.blank?)
-    record_line += (DOMAIN_TO_EXPORT + ".")
-  else
-    record_line += record.name
-  end
-  record_line += " "
-  record_line += record.ttl.to_s
-  record_line += " IN "
-  record_line += record.record_type
-  record_line += " "
-  unless record.prio.to_s.blank?
-    record_line += record.prio.to_s
-    record_line += " "
-  end
-  if record.record_type == "TXT"
-    record_line += ('"' + record.content + '"')
-  else
-    record_line += record.content
-  end
-  records_out.push record_line
-end
-
 puts header
 puts
-records_out.each do |record_line|
-  puts record_line
+
+NS_RECORDS.each do |ns_hostname|
+  puts "#{DOMAIN_TO_EXPORT}. #{DEFAULT_TTL} IN NS #{ns_hostname}."
+end
+
+records.each do |record|
+  name = 
+    if (record.name.nil? || record.name.empty?)
+      "#{DOMAIN_TO_EXPORT}."
+    else
+      record.name
+    end
+
+  prio = record.prio.to_s unless record.prio.to_s.empty?
+
+  txt_or_content = 
+    if record.record_type == "TXT"
+      %Q["#{record.content}"]
+    else
+      record.content
+    end
+
+  puts "#{name} #{record.ttl.to_s} IN #{record.record_type} #{prio} #{txt_or_content}"
 end
 
   

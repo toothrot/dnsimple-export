@@ -24,7 +24,7 @@ You might need to do this as the superuser if you're not using RVM -
 
 Copy auth.config.sample to auth.config and edit it with your DNSimple credentials.
 
-Edit dnsimple-export.rb and change the following -
+Edit `.env` or `~/.dnsimple-ruby` and change the following -
 
 ### MAIN_NS
 
@@ -41,6 +41,8 @@ These are the nameservers for your domain - DNSimple doesn't give any access to 
 ### DEFAULT_TTL
 
 Time to live for various records, including SOA. Don't fiddle with this if you don't know what it means.
+
+### USERNAME and PASSWORD
 
 ## Running the export
 
